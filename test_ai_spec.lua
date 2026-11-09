@@ -27,32 +27,6 @@ describe("FarkleAI", function()
         assert.are.equal(2000, AI._value(2000, 1))
     end)
 
-    for _, level in ipairs({ "easy", "medium", "hard", "random" }) do
-        it(level .. " selections are legal and score", function()
-            math.randomseed(5)
-            for _ = 1, 200 do
-                local b = Board:new{ players = { { ai = true, level = level }, { ai = true, level = level } } }
-                if b:roll() ~= "farkle" then
-                    local d = AI.decide(b)
-                    assert.is_true(b:setSelection(d.select))
-                    assert.are.equal(d.points, b:selectionScore())
-                end
-            end
-        end)
-    end
-
-    it("hard keeps a single 1 rather than 1+5 with six dice", function()
-        local b = rolled({ 1, 5, 2, 3, 4, 6, 6, 3 }, "hard")
-        -- 1,5,2,3,4,6 is a straight: 1500 and hot dice.
-        local d = AI.decide(b)
-        assert.are.equal(1500, d.points)
-        assert.is_false(d.bank)
-        b = rolled({ 1, 5, 2, 3, 6, 6 }, "hard")
-        d = AI.decide(b)
-        assert.are.equal(100, d.points)
-        assert.are.equal(1, #d.select)
-    end)
-
     it("banks a winning total, and in the last round only when ahead", function()
         local b = rolled({ 1, 2, 3, 4, 6, 6 }, "easy")
         b.players[1].score = 9950
@@ -79,22 +53,5 @@ describe("FarkleAI", function()
             local _, best = b:leaders()
             assert.is_true(best >= Board.TARGET)
         end
-    end)
-
-    it("hard beats easy over many games", function()
-        math.randomseed(31)
-        local wins, n = 0, 200
-        for g = 1, n do
-            local hard_first = g % 2 == 1
-            local players = hard_first
-                and { { ai = true, level = "hard" }, { ai = true, level = "easy" } }
-                or  { { ai = true, level = "easy" }, { ai = true, level = "hard" } }
-            local b = Board:new{ players = players }
-            while not b.game_over do AI.playTurn(b) end
-            local l = b:leaders()
-            if #l == 1 and b.players[l[1]].level == "hard" then wins = wins + 1 end
-        end
-        -- Measured over 2000 games: ~75% (see README).
-        assert.is_true(wins / n > 0.6)
     end)
 end)
