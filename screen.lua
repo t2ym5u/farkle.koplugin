@@ -392,7 +392,7 @@ function FarkleScreen:isRoundOver()
 end
 
 function FarkleScreen:onNewGame()
-    if self._ai_step then UIManager:unschedule(self._ai_step) end
+    self:cancelScheduled()  -- a pending computer step belongs to the old game
     self._ai_step, self.ai_decision = nil, nil
     self.board = FarkleBoard:new{ players = self:_playerSetup() }
     self:save()
@@ -413,7 +413,7 @@ function FarkleScreen:maybeRunAI(delay)
     if self.closed or self._ai_step or board.game_over or not board:currentPlayer().ai then
         return
     end
-    self._ai_step = function()
+    local step = function()
         self._ai_step = nil
         if self.closed then return end
         local before = board.current
@@ -421,7 +421,7 @@ function FarkleScreen:maybeRunAI(delay)
         -- A finished turn gets a longer pause, so its result can be read.
         self:maybeRunAI(board.current ~= before and AI_AFTER_TURN or nil)
     end
-    UIManager:scheduleIn(delay or AI_DELAY, self._ai_step)
+    self._ai_step = self:schedule(delay or AI_DELAY, step)
 end
 
 function FarkleScreen:_aiStep()
